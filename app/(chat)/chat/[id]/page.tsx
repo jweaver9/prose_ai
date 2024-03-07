@@ -1,44 +1,30 @@
-// Assuming you have these imports based on your provided code
-import { GetServerSideProps } from 'next';
-import { auth } from '@/auth';
-import { getChat } from '@/app/actions';
-import Chat from '@/components/chat';
+// app/chat/[id]/page.tsx
+import { Chat } from '@/components/chat';
+import { fetchChat } from '@/app/actions';
 
-// ChatPage component definition remains mostly unchanged but is no longer async
-const ChatPage = ({ id, initialMessages }) => {
-  return <Chat id={id} initialMessages={initialMessages} />;
-};
+// Define a loader function for server-side data fetching
+export async function loader({ params }) {
+  const { id } = params;
+  const session = await auth(); // Ensure your auth function can be called here
 
-export default ChatPage;
-
-// Define the getServerSideProps function for server-side data fetching
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await auth();
-
-  // Redirect if not authenticated
   if (!session?.user) {
-    return {
-      redirect: {
-        destination: `/sign-in?next=/chat/${context.params.id}`,
-        permanent: false,
-      },
-    };
+    // Redirect if not authenticated
+    throw new Response("Unauthorized", { status: 401, headers: { Location: '/sign-in' } });
   }
 
-  const chat = await getChat(context.params.id, session.user.id);
+  const chat = await fetchChat(id, session.user.id);
 
-  // Return 404 not found if the chat doesn't exist or the user doesn't have access
-  if (!chat || chat?.userId !== session?.user?.id) {
-    return {
-      notFound: true,
-    };
+  if (!chat) {
+    // Handle chat not found or no access
+    throw new Response("Not Found", { status: 404 });
   }
 
-  // Pass chat ID and messages as props to the page component
-  return {
-    props: {
-      id: chat.id,
-      initialMessages: chat.messages,
-    },
+  return { 
+    id: chat.id, 
+    initialMessages: chat.messages,
   };
-};
+}
+
+export default function ChatPage({ data }) {
+  return <Chat id={data.id} initialMessages={data.initialMessages} />;
+}
