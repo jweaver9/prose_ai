@@ -1,10 +1,11 @@
-import { SidebarDesktop } from '@/components/sidebar-desktop'
+import { SidebarDesktop } from '@/components/sidebar-desktop';
+import React from 'react';
 
 interface ChatLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
-export default async function ChatLayout({ children }: ChatLayoutProps) {
+const ChatLayout: React.FC<ChatLayoutProps> = ({ children }) => {
   return (
     <div className="relative flex h-[calc(100vh_-_theme(spacing.16))] overflow-hidden">
       <SidebarDesktop />
@@ -12,5 +13,8 @@ export default async function ChatLayout({ children }: ChatLayoutProps) {
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default ChatLayout;
+
