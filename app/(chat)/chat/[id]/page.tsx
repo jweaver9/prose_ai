@@ -1,47 +1,44 @@
-import { type Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+// Assuming you have these imports based on your provided code
+import { GetServerSideProps } from 'next';
+import { auth } from '@/auth';
+import { getChat } from '@/app/actions';
+import Chat from '@/components/chat';
 
-import { auth } from '@/auth'
-import { getChat } from '@/app/actions'
-import { Chat } from '@/components/chat'
+// ChatPage component definition remains mostly unchanged but is no longer async
+const ChatPage = ({ id, initialMessages }) => {
+  return <Chat id={id} initialMessages={initialMessages} />;
+};
 
-export interface ChatPageProps {
-  params: {
-    id: string
-  }
-}
+export default ChatPage;
 
-export async function generateMetadata({
-  params
-}: ChatPageProps): Promise<Metadata> {
-  const session = await auth()
+// Define the getServerSideProps function for server-side data fetching
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth();
 
+  // Redirect if not authenticated
   if (!session?.user) {
-    return {}
+    return {
+      redirect: {
+        destination: `/sign-in?next=/chat/${context.params.id}`,
+        permanent: false,
+      },
+    };
   }
 
-  const chat = await getChat(params.id, session.user.id)
+  const chat = await getChat(context.params.id, session.user.id);
+
+  // Return 404 not found if the chat doesn't exist or the user doesn't have access
+  if (!chat || chat?.userId !== session?.user?.id) {
+    return {
+      notFound: true,
+    };
+  }
+
+  // Pass chat ID and messages as props to the page component
   return {
-    title: chat?.title.toString().slice(0, 50) ?? 'Chat'
-  }
-}
-
-export default async function ChatPage({ params }: ChatPageProps) {
-  const session = await auth()
-
-  if (!session?.user) {
-    redirect(`/sign-in?next=/chat/${params.id}`)
-  }
-
-  const chat = await getChat(params.id, session.user.id)
-
-  if (!chat) {
-    notFound()
-  }
-
-  if (chat?.userId !== session?.user?.id) {
-    notFound()
-  }
-
-  return <Chat id={chat.id} initialMessages={chat.messages} />
-}
+    props: {
+      id: chat.id,
+      initialMessages: chat.messages,
+    },
+  };
+};
